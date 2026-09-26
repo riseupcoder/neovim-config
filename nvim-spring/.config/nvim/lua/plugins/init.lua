@@ -1,0 +1,5 @@
+require("plugins.colorscheme")
+require("plugins.oil")
+require("plugins.blink")
+require("plugins.jdtls")
+require("plugins.troublefix")
