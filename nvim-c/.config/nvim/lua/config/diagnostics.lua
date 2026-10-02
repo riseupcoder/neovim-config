@@ -1,80 +1,117 @@
 local map = vim.keymap.set
-local sev = vim.diagnostic.severity
+local diagnostic = vim.diagnostic
+local sev = diagnostic.severity
 
-local palette = {
-	err = "#51202A",
-	warn = "#3B3B1B",
-	info = "#1F3342",
-	hint = "#1E2E1E",
-}
+-- ============================================================================
+-- Diagnostic configuration
+-- ============================================================================
 
--- Diagnostic line highlights
-vim.api.nvim_set_hl(0, "DiagnosticErrorLine", {
-	bg = palette.err,
-	blend = 20,
-})
-
-vim.api.nvim_set_hl(0, "DiagnosticWarnLine", {
-	bg = palette.warn,
-	blend = 15,
-})
-
-vim.api.nvim_set_hl(0, "DiagnosticInfoLine", {
-	bg = palette.info,
-	blend = 10,
-})
-
-vim.api.nvim_set_hl(0, "DiagnosticHintLine", {
-	bg = palette.hint,
-	blend = 10,
-})
-
-vim.diagnostic.config({
-	-- Neovim defaults this to false; keep it enabled.
+diagnostic.config({
+	-- More severe diagnostics are displayed first.
 	severity_sort = true,
-        update_in_insert = true,
+
+	-- Avoid constantly changing diagnostics while typing.
+	-- Diagnostics update when leaving Insert mode.
+	update_in_insert = false,
+
+	-- ==========================================================================
+	-- Signs
+	-- ==========================================================================
+
+	-- ASCII intentionally: no Nerd Font required.
+	signs = {
+		text = {
+			[sev.ERROR] = "E",
+			[sev.WARN] = "W",
+			[sev.INFO] = "I",
+			[sev.HINT] = "H",
+		},
+
+		-- Highlight the affected line number.
+		-- Catppuccin supplies the diagnostic colors.
+		numhl = {
+			[sev.ERROR] = "DiagnosticSignError",
+			[sev.WARN] = "DiagnosticSignWarn",
+			[sev.INFO] = "DiagnosticSignInfo",
+			[sev.HINT] = "DiagnosticSignHint",
+		},
+	},
+
+	-- ==========================================================================
+	-- Source code
+	-- ==========================================================================
+
+	-- Highlight the exact diagnostic range.
+	underline = true,
+
+	-- Keep the actual diagnostic message visible.
+	--
+	-- This is useful for C/C++ because:
+	--
+	--     E 42  foo();
+	--             ^~~~~ implicit declaration of function 'foo'
+	--
+	-- We don't have to open a float just to see the compiler message.
+	virtual_text = {
+		spacing = 2,
+		source = "if_many",
+
+		-- Small ASCII prefix; no Nerd Font required.
+		prefix = "›",
+	},
+
+	-- ==========================================================================
+	-- Floating window
+	-- ==========================================================================
 
 	float = {
 		border = "rounded",
 		source = true,
+		header = "",
 	},
 
-	signs = {
-		text = {
-			[sev.ERROR] = " ",
-			[sev.WARN] = " ",
-			[sev.INFO] = " ",
-			[sev.HINT] = "󰌵 ",
-		},
+	-- ==========================================================================
+	-- Navigation
+	-- ==========================================================================
 
-		linehl = {
-			[sev.ERROR] = "DiagnosticErrorLine",
-		},
-	},
-
-	virtual_text = {
-		spacing = 4,
-		source = "if_many",
-		prefix = "●",
+	jump = {
+		float = true,
+		wrap = true,
 	},
 })
 
--- Show diagnostics for the current line.
-map("n", "<leader>cd", vim.diagnostic.open_float, {
+-- ============================================================================
+-- Current-line diagnostics
+-- ============================================================================
+
+map("n", "<leader>cd", diagnostic.open_float, {
 	desc = "Line Diagnostics",
 })
 
+-- ============================================================================
+-- Diagnostic navigation
+-- ============================================================================
+
 local function diagnostic_goto(count, severity)
 	return function()
-		vim.diagnostic.jump({
+		diagnostic.jump({
 			count = count,
-			float = true,
 			severity = severity,
+			float = true,
 		})
 	end
 end
 
--- Severity-specific navigation.
+-- Any diagnostic
+map("n", "]d", diagnostic_goto(1), {
+	desc = "Next Diagnostic",
+})
+
+map("n", "[d", diagnostic_goto(-1), {
+	desc = "Previous Diagnostic",
+})
+
+-- Errors
 map("n", "]e", diagnostic_goto(1, sev.ERROR), {
 	desc = "Next Error",
 })
@@ -83,6 +120,7 @@ map("n", "[e", diagnostic_goto(-1, sev.ERROR), {
 	desc = "Previous Error",
 })
 
+-- Warnings
 map("n", "]w", diagnostic_goto(1, sev.WARN), {
 	desc = "Next Warning",
 })
@@ -91,3 +129,8 @@ map("n", "[w", diagnostic_goto(-1, sev.WARN), {
 	desc = "Previous Warning",
 })
 
+vim.api.nvim_create_autocmd("CursorHold", {
+  callback = function()
+    vim.diagnostic.open_float(nil, { focus = false, border = "rounded" })
+  end,
+})

@@ -1,85 +1,42 @@
 local M = {}
 
+-- ============================================================================
+-- Mode
+-- ============================================================================
+
 local mode_names = {
-	n = "NORMAL",
-	i = "INSERT",
-	v = "VISUAL",
-	V = "V-LINE",
-	["\22"] = "V-BLOCK",
-	c = "COMMAND",
-	R = "REPLACE",
-	t = "TERMINAL",
+	n = "Normal",
+	no = "Normal",
+
+	i = "Insert",
+	ic = "Insert",
+	ix = "Insert",
+
+	v = "Visual",
+	V = "Visual",
+	["\22"] = "Visual",
+
+	c = "Command",
+
+	R = "Replace",
+	Rv = "Replace",
+
+	t = "Terminal",
 }
-
-local mode_colors = {
-	NORMAL = "StatusModeNormal",
-	INSERT = "StatusModeInsert",
-	VISUAL = "StatusModeVisual",
-	["V-LINE"] = "StatusModeVisual",
-	["V-BLOCK"] = "StatusModeVisual",
-	COMMAND = "StatusModeCommand",
-	REPLACE = "StatusModeReplace",
-	TERMINAL = "StatusModeTerminal",
-}
-
-local function setup_highlights()
-	local function set(name, fg, bg)
-		vim.api.nvim_set_hl(0, name, {
-			fg = fg,
-			bg = bg,
-			bold = true,
-		})
-	end
-
-	set("StatusModeNormal", "#1D2021", "#89B482")
-	set("StatusModeInsert", "#1D2021", "#7DAEA3")
-	set("StatusModeVisual", "#1D2021", "#D3869B")
-	set("StatusModeCommand", "#1D2021", "#D8A657")
-	set("StatusModeReplace", "#1D2021", "#EA6962")
-	set("StatusModeTerminal", "#1D2021", "#A9B665")
-
-	vim.api.nvim_set_hl(0, "StatusFile", {
-		fg = "#D4BE98",
-		bold = true,
-	})
-
-	vim.api.nvim_set_hl(0, "StatusModified", {
-		fg = "#D8A657",
-		bold = true,
-	})
-
-	vim.api.nvim_set_hl(0, "StatusLsp", {
-		fg = "#7DAEA3",
-		bold = true,
-	})
-
-	vim.api.nvim_set_hl(0, "StatusType", {
-		fg = "#7DAEA3",
-		bold = true,
-	})
-
-	vim.api.nvim_set_hl(0, "StatusLocation", {
-		fg = "#D4BE98",
-	})
-
-	vim.api.nvim_set_hl(0, "StatusPercent", {
-		fg = "#89B482",
-		bold = true,
-	})
-
-	vim.api.nvim_set_hl(0, "StatusDim", {
-		fg = "#928374",
-	})
-end
-
-setup_highlights()
 
 local function mode()
-	local name = mode_names[vim.fn.mode()] or vim.fn.mode()
-	local hl = mode_colors[name] or "StatusModeNormal"
+	local name = mode_names[vim.fn.mode()] or "Normal"
 
-	return "%#" .. hl .. "# " .. name .. " %*"
+	return "%#StatusMode"
+		.. name
+		.. "# "
+		.. name:upper()
+		.. " %*"
 end
+
+-- ============================================================================
+-- File
+-- ============================================================================
 
 local function file()
 	local name = vim.fn.expand("%:t")
@@ -88,18 +45,55 @@ local function file()
 		name = "[No Name]"
 	end
 
-	local result = "%#StatusFile# " .. name
+	local result = "%#StatusFile# " .. name .. "%*"
 
 	if vim.bo.modified then
 		result = result .. " %#StatusModified#●%*"
 	end
 
 	if vim.bo.readonly then
-		result = result .. " %#StatusDim#[RO]%*"
+		result = result .. " %#StatusReadonly#[RO]%*"
 	end
 
-	return result .. " "
+	return result
 end
+
+-- ============================================================================
+-- Separator
+-- ============================================================================
+
+local function separator()
+	return " %#StatusSeparator#│%* "
+end
+
+-- ============================================================================
+-- Diagnostics
+-- ============================================================================
+
+local function diagnostics()
+	local counts = vim.diagnostic.count(0)
+
+	local errors = counts[vim.diagnostic.severity.ERROR] or 0
+	local warnings = counts[vim.diagnostic.severity.WARN] or 0
+
+	local result = {}
+
+	if errors > 0 then
+		result[#result + 1] =
+			"%#StatusError#E " .. errors .. "%*"
+	end
+
+	if warnings > 0 then
+		result[#result + 1] =
+			"%#StatusWarn#W " .. warnings .. "%*"
+	end
+
+	return table.concat(result, " ")
+end
+
+-- ============================================================================
+-- LSP
+-- ============================================================================
 
 local function lsp()
 	local clients = vim.lsp.get_clients({
@@ -116,71 +110,89 @@ local function lsp()
 		names[#names + 1] = client.name
 	end
 
-	return "%#StatusLsp#󰒋 " .. table.concat(names, ", ") .. "%* "
+	table.sort(names)
+
+	return "%#StatusLsp#"
+		.. table.concat(names, ", ")
+		.. "%*"
 end
 
-local function diagnostics()
-	local status = vim.diagnostic.status()
+-- ============================================================================
+-- Progress
+-- ============================================================================
+
+local function progress()
+	local status = vim.ui.progress_status()
 
 	if status == "" then
 		return ""
 	end
 
-	return status .. " "
+	return "%#StatusProgress#" .. status .. "%*"
 end
 
-local function filetype()
-	if vim.bo.filetype == "" then
-		return ""
-	end
-
-	return "%#StatusType#"
-		.. vim.bo.filetype
-		.. "%* "
-end
-
-local function encoding()
-	local parts = {}
-
-	local enc = vim.bo.fileencoding
-
-	if enc ~= "" and enc ~= "utf-8" then
-		parts[#parts + 1] = enc
-	end
-
-	if vim.bo.fileformat ~= "unix" then
-		parts[#parts + 1] = vim.bo.fileformat
-	end
-
-	if #parts == 0 then
-		return ""
-	end
-
-	return "%#StatusDim#"
-		.. table.concat(parts, " ")
-		.. "%* "
-end
+-- ============================================================================
+-- Statusline
+-- ============================================================================
 
 function M.build()
-	return table.concat({
+	local left = {
 		mode(),
+		" ",
 		file(),
-		lsp(),
-		diagnostics(),
+	}
 
-		"%=",
+	-- Diagnostics belong on the left because they are attention-oriented.
+	local diagnostic_status = diagnostics()
 
-		filetype(),
-		encoding(),
+	if diagnostic_status ~= "" then
+		left[#left + 1] = separator()
+		left[#left + 1] = diagnostic_status
+	end
 
-		"%#StatusLocation#Ln %l, Col %c%* ",
-		"%#StatusPercent#%p%%%* ",
-	})
+	local progress_status = progress()
+
+	if progress_status ~= "" then
+		left[#left + 1] = separator()
+		left[#left + 1] = progress_status
+	end
+
+	-- Right side:
+	--
+	-- c │ clangd │ 42:17 │ 72%
+	local right = {
+		"%#StatusFiletype#"
+			.. vim.bo.filetype
+			.. "%*",
+	}
+
+	local lsp_status = lsp()
+
+	if lsp_status ~= "" then
+		right[#right + 1] = separator()
+		right[#right + 1] = lsp_status
+	end
+
+	right[#right + 1] = separator()
+	right[#right + 1] = "%#StatusLocation#%l:%c%*"
+
+	right[#right + 1] = separator()
+	right[#right + 1] = "%#StatusPercent#%p%%%* "
+
+	return table.concat(left)
+		.. "%="
+		.. table.concat(right)
 end
+
+-- ============================================================================
+-- Options
+-- ============================================================================
 
 vim.opt.laststatus = 3
 vim.opt.showmode = false
 
-vim.o.statusline = "%!v:lua.require('config.statusline').build()"
+vim.o.statusline =
+	"%!v:lua.require('config.statusline').build()"
 
 return M
+

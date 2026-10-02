@@ -1,32 +1,93 @@
 local map = vim.keymap.set
 
+-- ============================================================================
+-- Leader
+-- ============================================================================
+
+-- Space is the leader key.
+-- Disable its default behavior so it doesn't interfere with leader mappings.
 map("n", "<leader>", "<nop>")
-
-map("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
-map("i", "jj", "<Esc>", { desc = "Exit insert mode with jj" })
-
--- Next/previous diagnostic
-map("n", "]d", vim.diagnostic.goto_next, { desc = "Next Diagnostic" })
-map("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous Diagnostic" })
-map("n", "<leader>e", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
-
--- Save and quit current file quicker
-map("n", "<leader>w", "<cmd>w<cr>", { silent = false })
-map("n", "<leader>q", "<cmd>q<cr>", { silent = false })
-
--- Paste without replacing paste with what you are highlighted over
-map("n", "<leader>p", '"_dP')
-map("n", "<leader>p", '"+p', { desc = "Paste from system clipboard" })
-
--- Yank to system clipboard
-map("n", "<leader>y", '"+y')
-map("v", "<leader>y", '"+y')
-map("n", "<leader>Y", '"+Y')
-
--- Visual Mode
-
--- Disable Space bar since it'll be used as the leader key
 map("v", "<leader>", "<nop>")
 
-vim.keymap.set('n', '<leader>ff', '<cmd>Pick files<cr>',     { desc = 'Find files' })
-vim.keymap.set('n', '<leader>fb', '<cmd>Pick buffers<cr>',   { desc = 'Switch buffer' })
+-- ============================================================================
+-- File navigation
+-- ============================================================================
+
+map("n", "-", "<cmd>Oil<cr>", {
+	desc = "Open Parent Directory",
+})
+
+map("n", "<leader>ff", "<cmd>Pick files<cr>", {
+	desc = "Find Files",
+})
+
+map("n", "<leader>fb", "<cmd>Pick buffers<cr>", {
+	desc = "Switch Buffer",
+})
+
+-- ============================================================================
+-- Insert mode
+-- ============================================================================
+
+map("i", "jj", "<Esc>", {
+	desc = "Exit Insert Mode",
+})
+
+-- ============================================================================
+-- Clipboard
+-- ============================================================================
+
+-- Paste without overwriting the yank register.
+map("n", "<leader>p", '"_dP', {
+	desc = "Paste Without Overwriting",
+})
+
+-- Paste from system clipboard.
+--
+-- If you prefer <leader>p to always mean system clipboard paste,
+-- remove the mapping above and keep only this one.
+map("n", "<leader>P", '"+p', {
+	desc = "Paste From System Clipboard",
+})
+
+-- Yank to system clipboard.
+map("n", "<leader>y", '"+y', {
+	desc = "Yank to System Clipboard",
+})
+
+map("v", "<leader>y", '"+y', {
+	desc = "Yank to System Clipboard",
+})
+
+map("n", "<leader>Y", '"+Y', {
+	desc = "Yank Line to System Clipboard",
+})
+
+-- ============================================================================
+-- C development
+-- ============================================================================
+
+map("n", "<leader>t", function()
+	vim.cmd.write()
+
+	vim.cmd(
+		"vertical rightbelow term cd %:p:h && "
+			.. "clang -std=c23 -Wall -Wextra %:t "
+			.. "-o %:t:r -lm && ./%:t:r"
+	)
+end, {
+	desc = "Compile and Run C",
+})
+
+-- ============================================================================
+-- Save / quit
+-- ============================================================================
+
+map("n", "<leader>w", "<cmd>write<cr><cmd>echo ''<cr>", {
+	desc = "Save File",
+})
+
+map("n", "<leader>q", "<cmd>quit<cr>", {
+	desc = "Quit Window",
+})
+
