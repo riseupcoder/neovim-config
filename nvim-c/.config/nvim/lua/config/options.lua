@@ -76,9 +76,46 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
+-- Disable automatic comment continuation
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "*",
+  callback = function()
+    vim.opt_local.formatoptions:remove({ "r", "o" })
+  end,
+})
+
 -- ============================================================================
 -- Security / Persistence
 -- ============================================================================
 
 -- Do not allow files to change editor options through modelines.
 vim.opt.modeline = false
+
+-- Auto Save
+local group = vim.api.nvim_create_augroup("autosave", {
+	clear = true,
+})
+
+vim.api.nvim_create_autocmd({
+	"InsertLeave",
+	"FocusLost",
+	"BufLeave",
+	"VimLeavePre",
+}, {
+	group = group,
+
+	callback = function()
+		local buf = vim.api.nvim_get_current_buf()
+
+		if vim.bo[buf].buftype ~= ""
+			or not vim.bo[buf].modifiable
+			or vim.bo[buf].readonly
+			or vim.api.nvim_buf_get_name(buf) == ""
+		then
+			return
+		end
+
+		vim.cmd("silent update")
+	end,
+})
+

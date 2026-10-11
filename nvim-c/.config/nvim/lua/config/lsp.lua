@@ -64,28 +64,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		-- ======================================================================
 
 		if client:supports_method("textDocument/codeAction") then
-			vim.keymap.set({ "n", "v" }, "<leader>ca", function()
-				local row = vim.api.nvim_win_get_cursor(0)[1] - 1
-
-				local line = vim.api.nvim_buf_get_lines(
-					buf,
-					row,
-					row + 1,
-					false
-				)[1] or ""
-
-				vim.lsp.buf.code_action({
-					range = {
-						start = { row, 0 },
-						["end"] = { row, #line },
-					},
-
-					context = {
-						triggerKind =
-							vim.lsp.protocol.CodeActionTriggerKind.Invoked,
-					},
-				})
-			end, {
+			vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, {
 				buffer = buf,
 				desc = "LSP: Code Action",
 			})
@@ -104,7 +83,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	end,
 })
 
--- Native Neovim LSP configuration.
-vim.lsp.enable("clangd")
+-- ============================================================================
+-- Native Neovim LSP configuration
+-- ============================================================================
 
+vim.lsp.enable("clangd")
 

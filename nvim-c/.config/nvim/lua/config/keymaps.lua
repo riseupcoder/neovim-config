@@ -72,7 +72,7 @@ map("n", "<leader>t", function()
 
 	vim.cmd(
 		"vertical rightbelow term cd %:p:h && "
-			.. "clang -std=c23 -Wall -Wextra %:t "
+			.. "clang -std=c23 -Wall -Wextra -Wunreachable-code -Wpedantic %:t "
 			.. "-o %:t:r -lm && ./%:t:r"
 	)
 end, {
@@ -91,3 +91,5 @@ map("n", "<leader>q", "<cmd>quit<cr>", {
 	desc = "Quit Window",
 })
 
+map("n", "q", "<Nop>")
+map("n", "Q", "<Nop>")
